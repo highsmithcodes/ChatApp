@@ -14,7 +14,10 @@ namespace backend.Controllers
             // Here, you can process and store the received message.
             // Example: Store the message in the database and broadcast it to other users using SignalR.
             // Replace Chat with the appropriate model representing the message data.
-            // Return appropriate responses to indicate success or failure.
+
+            // For demonstration purposes, we will just log the received message in the backend console.
+            // You can replace this with your actual message processing logic.
+            System.Console.WriteLine($"Received message: Sender - {message.Sender}, Message - {message.Message}");
 
             // Return an appropriate action result, for example:
             return Ok(new { Success = true }); // You can customize the response object as needed.
