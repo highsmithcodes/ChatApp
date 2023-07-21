@@ -19,6 +19,8 @@ const ChatComponent: React.FC = () => {
       .then((data) => setChatHistory(data))
       .catch((error) => console.error('Error fetching chat history:', error));
 
+    console.log(activeUsers)
+
     // Fetch active users on the client-side
     fetch('https://localhost:7232/api/chat/users')
       .then((response) => response.json())
@@ -30,20 +32,20 @@ const ChatComponent: React.FC = () => {
     <div>
       <h1>Chat History</h1>
       <ul>
-        {chatHistory.map((message) => (
+        {/* {chatHistory.map((message) => (
           <li key={message.id}>
             <p>{message.sender}: {message.message}</p>
           </li>
-        ))}
+        ))} */}
       </ul>
       {/* Render active users data here */}
-      {/* <ul>
+      <ul>
         {activeUsers.map((user) => (
           <li key={user.id}>
-            <p>{user.name}</p>
+            <p>{user}</p>
           </li>
         ))}
-      </ul> */}
+      </ul>
     </div>
   );
 };
