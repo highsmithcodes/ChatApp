@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Concurrent;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers
@@ -6,43 +11,75 @@ namespace backend.Controllers
     [Route("api/chat")]
     public class ChatController : ControllerBase
     {
-        // Controller actions
+        // Concurrent dictionary to store WebSocket connections
+        private static ConcurrentDictionary<string, WebSocket> _connections = new ConcurrentDictionary<string, WebSocket>();
 
-        [HttpPost("send")]
-        public IActionResult SendMessage([FromBody] Chat message)
+        // WebSocket endpoint
+        [HttpGet("ws")]
+        public async Task<IActionResult> WebSocket()
         {
-            // Here, you can process and store the received message.
-            // Example: Store the message in the database and broadcast it to other users using SignalR.
-            // Replace Chat with the appropriate model representing the message data.
+            if (HttpContext.WebSockets.IsWebSocketRequest)
+            {
+                WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                // Generate a unique connection ID (you may use other methods to identify users)
+                string connectionId = Guid.NewGuid().ToString();
 
-            // For demonstration purposes, we will just log the received message in the backend console.
-            // You can replace this with your actual message processing logic.
-            System.Console.WriteLine($"Received message: Sender - {message.Sender}, Message - {message.Message}");
+                // Store the WebSocket connection using the connectionId
+                _connections.TryAdd(connectionId, webSocket);
 
-            // Return an appropriate action result, for example:
-            return Ok(new { Success = true }); // You can customize the response object as needed.
+                try
+                {
+                    await HandleWebSocket(connectionId, webSocket);
+                }
+                finally
+                {
+                    // Remove the WebSocket connection when the client disconnects
+                    _connections.TryRemove(connectionId, out _);
+                    webSocket.Dispose();
+                }
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = 400;
+            }
+
+            return new EmptyResult();
         }
 
-        [HttpGet("history")]
-        public IActionResult GetChatHistory([FromQuery] int conversationId)
+        private async Task HandleWebSocket(string connectionId, WebSocket webSocket)
         {
-            // Retrieve the chat history from the database or other data source based on the conversationId.
-            // Return the chat history in the response.
+            var buffer = new byte[1024 * 4];
 
-            // Return an appropriate action result, for example:
-            return Ok(new[] { new Chat(), new Chat() }); // Dummy data, replace with your actual chat history.
+            while (webSocket.State == WebSocketState.Open)
+            {
+                // Receive data from the WebSocket
+                WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    // Process and handle the received message
+                    // For example, you can broadcast it to other connected users
+                    string message = System.Text.Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    await BroadcastMessage(connectionId, message);
+                }
+                else if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "WebSocket connection closed", CancellationToken.None);
+                }
+            }
         }
 
-        [HttpGet("users")]
-        public IActionResult GetActiveUsers()
+        private async Task BroadcastMessage(string senderConnectionId, string message)
         {
-            // Retrieve the list of active users from the database or other data source.
-            // Return the list of active users in the response.
-
-            // Return an appropriate action result, for example:
-            return Ok(new[] { "User1", "User2" }); // Dummy data, replace with your actual list of active users.
+            // Broadcast the message to all connected users except the sender
+            foreach (var connection in _connections)
+            {
+                if (connection.Key != senderConnectionId && connection.Value.State == WebSocketState.Open)
+                {
+                    var messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
+                    await connection.Value.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+            }
         }
     }
 }
-
-

@@ -25,3 +25,4 @@
 /Users/ezra/Documents/GitHub/ChatAppC/backend/obj/Debug/net6.0/backend.pdb
 /Users/ezra/Documents/GitHub/ChatAppC/backend/obj/Debug/net6.0/backend.genruntimeconfig.cache
 /Users/ezra/Documents/GitHub/ChatAppC/backend/obj/Debug/net6.0/ref/backend.dll
+/Users/ezra/Documents/GitHub/ChatAppC/backend/bin/Debug/net6.0/System.Net.WebSockets.WebSocketProtocol.dll

@@ -1,40 +1,36 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import ChatInput from './ChatInput';
-import io from 'socket.io-client';
-
-interface Message {
-  id: number;
-  sender: string;
-  message: string;
-}
 
 const ChatComponent: React.FC = () => {
-  // State to store incoming messages from the WebSocket
   const [messages, setMessages] = useState<string[]>([]);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     // Establish the WebSocket connection when the component mounts
-    const socket = io('wss://localhost:7232/ws'); // Replace 'your-backend-url' with the actual WebSocket URL
+    const ws = new WebSocket('wss://localhost:7232/api/chat/ws');
 
     // Listen for incoming messages from the WebSocket
-    socket.on('ReceiveMessage', (sender: string, message: string) => {
-      const newMessage = `${sender}: ${message}`;
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const newMessage = `${data.sender}: ${data.message}`;
       setMessages((prevMessages) => [...prevMessages, newMessage]);
-    });
+    };
+
+    // Set the socket state to the WebSocket instance
+    setSocket(ws);
 
     // Clean up the WebSocket connection when the component unmounts
     return () => {
-      socket.disconnect();
+      ws.close();
     };
   }, []);
 
-  // Function to send a message to the backend
   const sendMessage = (message: string) => {
-    // Send the message to the backend using WebSocket
-    // Replace 'your-backend-url' with the actual WebSocket URL
-    const socket = io('wss://localhost:7232/ws');
-    socket.emit('SendMessage', { sender: 'User1', message });
+    // Send the message to the WebSocket server
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ sender: 'User1', message }));
+    }
   };
 
   return (
